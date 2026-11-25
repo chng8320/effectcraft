@@ -98,8 +98,12 @@ fn stdout_broken() -> bool {
     STDOUT_FAILED.get().is_some_and(|k| *k != std::io::ErrorKind::BrokenPipe)
 }
 
-const USAGE: &str = "usage: effectcraft-cli <info|commands|exec|run|props|get|set|render-frame|render|script|replay|mcp> [args] [--json]
+const USAGE: &str = "usage: effectcraft-cli <info|stream|commands|exec|run|props|get|set|render-frame|render|script|replay|mcp> [args] [--json]
   info                                     project + engine summary
+  stream --chain FILE|JSON --width W --height H [--fps N] [--control FIFO] | --list
+                                           live video: raw RGBA frames on standard input through a chain
+                                           of effects ([{"id": ID, "params": {...}}, ...]) to standard output;
+                                           --control: JSON lines that change parameters while it runs
   commands [--filter TEXT] [--enabled]     list engine commands
   exec <command-id> [--params JSON]        run one engine command (exec --list: list them, as `commands`)
   run <id> <json> [<id> <json> ...]        run several commands in order
@@ -151,6 +155,10 @@ options: --project F.ecproj | --demo | --empty   --save | --save-as F   --bridge
 
 /// Options that take a value.
 const VALUED: &[&str] = &[
+    "--chain",
+    "--width",
+    "--height",
+    "--control",
     "--n",
     "--clip",
     "--truth",
@@ -670,6 +678,7 @@ fn run(cmd: &str, args: &Args, json_out: bool) -> Result<(), Failure> {
                 }
             }
         }
+        "stream" => stream_cmd(args)?,
         "commands" => list_commands_cmd(args, json_out)?,
         "exec" if args.flag("--list") => list_commands_cmd(args, json_out)?,
         "script" => script_cmd(args, json_out)?,
@@ -1669,4 +1678,23 @@ mod tests {
             assert!(VALUED.contains(&opt.as_str()) || FLAGS.contains(&opt.as_str()), "{opt} is read but not declared");
         }
     }
+}
+
+/// `stream`: EffectCraft's effects on a live video stream (crates/stream).
+fn stream_cmd(args: &Args) -> Result<(), Failure> {
+    if args.flag("--list") {
+        say!("{}", effectcraft_stream::list_json());
+        return Ok(());
+    }
+    let chain = args.opt("--chain").ok_or_else(|| Failure::Usage("stream needs --chain FILE or JSON (stream --list: the effects)".into()))?;
+    let dim = |k: &str| -> Result<u32, Failure> {
+        args.opt(k).ok_or_else(|| Failure::Usage(format!("stream needs {k}")))?.parse::<u32>().map_err(|_| Failure::Usage(format!("{k}: a whole number of pixels")))
+    };
+    let fps = args.num("--fps").map_err(Failure::Usage)?.unwrap_or(30.0);
+    let opts = effectcraft_stream::ServeOptions {
+        chain: chain.to_string(),
+        config: effectcraft_stream::StreamConfig { width: dim("--width")?, height: dim("--height")?, fps },
+        control: args.opt("--control").map(str::to_string),
+    };
+    effectcraft_stream::serve(&opts, &mut std::io::stderr()).map(|_| ()).map_err(|e| Failure::Error(e.to_string()))
 }

@@ -26,7 +26,7 @@ command line, runs the automation tests and attaches the program as `dataverse-e
 
 | Commit | What | Offered upstream? |
 |---|---|---|
-| (none yet) | | |
+| stream mode | `crates/stream` + `effectcraft-cli stream`: a chain of effects on live raw RGBA video (stdin to stdout), live parameter changes over a control FIFO | not yet |
 
 ## Name
 

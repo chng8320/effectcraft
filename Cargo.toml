@@ -44,6 +44,7 @@ effectcraft-keyframe = { path = "crates/keyframe" }
 effectcraft-project = { path = "crates/project" }
 effectcraft-text = { path = "crates/text" }
 effectcraft-effects = { path = "crates/effects" }
+effectcraft-stream = { path = "crates/stream" }
 effectcraft-track = { path = "crates/track" }
 effectcraft-segment = { path = "crates/segment" }
 effectcraft-sam2 = { path = "crates/sam2" }

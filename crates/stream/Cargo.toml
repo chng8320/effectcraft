@@ -1,0 +1,18 @@
+[package]
+name = "effectcraft-stream"
+description = "EffectCraft stream mode: a chain of EffectCraft effects on a live video stream (raw RGBA frames in, raw RGBA frames out), with live parameter changes"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+effectcraft-effects = { workspace = true }
+effectcraft-keyframe = { workspace = true }
+effectcraft-raster = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+
+[lints]
+workspace = true

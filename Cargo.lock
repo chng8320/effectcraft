@@ -2001,6 +2001,7 @@ dependencies = [
  "effectcraft-render",
  "effectcraft-sam2",
  "effectcraft-segment",
+ "effectcraft-stream",
  "effectcraft-time",
  "effectcraft-track",
  "effectcraft-ui-egui",
@@ -2454,6 +2455,18 @@ dependencies = [
  "log",
  "rayon",
  "roxmltree",
+]
+
+[[package]]
+name = "effectcraft-stream"
+version = "0.25.1"
+dependencies = [
+ "effectcraft-effects",
+ "effectcraft-keyframe",
+ "effectcraft-raster",
+ "log",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

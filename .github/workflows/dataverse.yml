@@ -63,6 +63,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Build the command line
         run: cargo build --release -p effectcraft-cli
+      - name: FFmpeg (live mode's input and output; its test runs it)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - name: Test the automation crate (our commands go there)
         run: cargo test --release -p effectcraft-automation -p effectcraft-stream
       - name: Name it for the Dataverse

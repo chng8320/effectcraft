@@ -19,6 +19,9 @@ use effectcraft_keyframe::Value;
 use effectcraft_raster::Image;
 use serde::{Deserialize, Serialize};
 
+mod live;
+pub use live::{LiveRun, live};
+
 /// One effect of a chain: its id and the parameters to set.
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct ChainItem {
@@ -75,10 +78,19 @@ pub enum Control {
 #[derive(Debug)]
 pub enum StreamError {
     UnknownEffect(String),
-    UnknownParam { effect: String, param: String },
-    BadValue { effect: String, param: String, why: String },
+    UnknownParam {
+        effect: String,
+        param: String,
+    },
+    BadValue {
+        effect: String,
+        param: String,
+        why: String,
+    },
     BadSize(String),
     Io(io::Error),
+    /// The live input or output (FFmpeg) failed.
+    Live(String),
 }
 
 impl std::fmt::Display for StreamError {
@@ -89,6 +101,7 @@ impl std::fmt::Display for StreamError {
             Self::BadValue { effect, param, why } => write!(f, "{effect} {param}: {why}"),
             Self::BadSize(m) => write!(f, "{m}"),
             Self::Io(e) => write!(f, "{e}"),
+            Self::Live(m) => write!(f, "{m}"),
         }
     }
 }
@@ -331,8 +344,7 @@ pub struct ServeOptions {
 /// Frames on standard input, frames on standard output, a JSON line to `log` when it starts and
 /// when it ends.
 pub fn serve(opts: &ServeOptions, log: &mut dyn Write) -> Result<StreamStats, StreamError> {
-    let text = if opts.chain.trim_start().starts_with(['[', '{']) { opts.chain.clone() } else { std::fs::read_to_string(&opts.chain)? };
-    let spec: ChainSpec = serde_json::from_str(&text).map_err(|e| StreamError::Io(io::Error::new(io::ErrorKind::InvalidData, format!("chain: {e}"))))?;
+    let spec = load_chain(&opts.chain)?;
     let mut chain = Chain::new(&spec, &opts.config)?;
     let ids: Vec<&str> = spec.items().iter().map(|i| i.id.as_str()).collect();
     let _ = writeln!(
@@ -370,6 +382,12 @@ pub fn serve(opts: &ServeOptions, log: &mut dyn Write) -> Result<StreamStats, St
     }
     let _ = writeln!(log, "{}", serde_json::json!({"stream": "ended", "stats": stats}));
     Ok(stats)
+}
+
+/// A chain from a JSON text or a file holding one.
+pub fn load_chain(chain: &str) -> Result<ChainSpec, StreamError> {
+    let text = if chain.trim_start().starts_with(['[', '{']) { chain.to_string() } else { std::fs::read_to_string(chain)? };
+    serde_json::from_str(&text).map_err(|e| StreamError::Io(io::Error::new(io::ErrorKind::InvalidData, format!("chain: {e}"))))
 }
 
 /// The effects a stream can run, with their parameters and defaults (for `--list`).

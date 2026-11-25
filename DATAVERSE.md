@@ -32,3 +32,10 @@ command line, runs the automation tests and attaches the program as `dataverse-e
 
 The ArtCraft name and logos are trademarks, not covered by the code licence; modified versions must not use
 them. Our build is called `dataverse-effect-cli` and is described as "based on EffectCraft by the ArtCraft team".
+
+## Live mode
+
+`effectcraft-cli live --chain CHAIN --in URL --out URL --width W --height H [--fps N] [--control tcp:PORT|FIFO]`
+runs EffectCraft's effects on a live stream end to end: FFmpeg (through craft-live, from the Dataverse fork of
+craft-libs, pinned on its `dataverse-pins` branch) reads RTMP, SRT, RTSP, HLS, a device (`--in-format v4l2`…) or a
+file, the chain processes each frame, and FFmpeg encodes H.264 to the output with the input's audio carried.

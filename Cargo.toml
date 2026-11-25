@@ -45,6 +45,8 @@ effectcraft-project = { path = "crates/project" }
 effectcraft-text = { path = "crates/text" }
 effectcraft-effects = { path = "crates/effects" }
 effectcraft-stream = { path = "crates/stream" }
+# Live input and output (FFmpeg), from the Dataverse fork of craft-libs; the dataverse-pins branch keeps this commit.
+craft-live = { git = "https://github.com/chng8320/craft-libs", rev = "ec3d11034d449c1e6229e1a75a40dfb60beb3728", default-features = false }
 effectcraft-track = { path = "crates/track" }
 effectcraft-segment = { path = "crates/segment" }
 effectcraft-sam2 = { path = "crates/sam2" }

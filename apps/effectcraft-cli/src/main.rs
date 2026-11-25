@@ -101,6 +101,8 @@ fn stdout_broken() -> bool {
 const USAGE: &str = "usage: effectcraft-cli <info|stream|commands|exec|run|props|get|set|render-frame|render|script|replay|mcp> [args] [--json]
   info                                     project + engine summary
   stream --chain FILE|JSON --width W --height H [--fps N] [--control FIFO] | --list
+  live --chain FILE|JSON --in URL|DEVICE|FILE [--in-format F] --out URL|FILE --width W --height H [--fps N]
+       [--control tcp:PORT|FIFO] [--seconds N] [--no-audio] [--video-bitrate KBPS]
                                            live video: raw RGBA frames on standard input through a chain
                                            of effects ([{"id": ID, "params": {...}}, ...]) to standard output;
                                            --control: JSON lines that change parameters while it runs
@@ -679,6 +681,7 @@ fn run(cmd: &str, args: &Args, json_out: bool) -> Result<(), Failure> {
             }
         }
         "stream" => stream_cmd(args)?,
+        "live" => live_cmd(args)?,
         "commands" => list_commands_cmd(args, json_out)?,
         "exec" if args.flag("--list") => list_commands_cmd(args, json_out)?,
         "script" => script_cmd(args, json_out)?,
@@ -1678,6 +1681,25 @@ mod tests {
             assert!(VALUED.contains(&opt.as_str()) || FLAGS.contains(&opt.as_str()), "{opt} is read but not declared");
         }
     }
+}
+
+/// `live`: EffectCraft's effects from a live input to a live output (crates/stream, FFmpeg through
+/// craft-live), the input's audio carried alongside.
+fn live_cmd(args: &Args) -> Result<(), Failure> {
+    let need = |k: &str| args.opt(k).ok_or_else(|| Failure::Usage(format!("live needs {k}")));
+    let dim = |k: &str| -> Result<u32, Failure> { need(k)?.parse::<u32>().map_err(|_| Failure::Usage(format!("{k}: a whole number of pixels"))) };
+    let run = effectcraft_stream::LiveRun {
+        chain: need("--chain")?.to_string(),
+        input: need("--in")?.to_string(),
+        input_format: args.opt("--in-format").map(str::to_string),
+        output: need("--out")?.to_string(),
+        control: args.opt("--control").map(str::to_string),
+        config: effectcraft_stream::StreamConfig { width: dim("--width")?, height: dim("--height")?, fps: args.num("--fps").map_err(Failure::Usage)?.unwrap_or(30.0) },
+        seconds: args.num("--seconds").map_err(Failure::Usage)?.map_or(0, |s: f64| s.max(0.0) as u32),
+        carry_audio: !args.flag("--no-audio"),
+        video_bitrate_kbps: args.num("--video-bitrate").map_err(Failure::Usage)?.map(|k: f64| k.max(1.0) as u32),
+    };
+    effectcraft_stream::live(&run, &mut std::io::stderr()).map(|_| ()).map_err(|e| Failure::Error(e.to_string()))
 }
 
 /// `stream`: EffectCraft's effects on a live video stream (crates/stream).

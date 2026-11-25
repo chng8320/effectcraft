@@ -74,3 +74,29 @@ fn the_list_offers_only_effects_that_need_nothing_but_the_frame() {
     assert!(ids.contains(&"ec.blur.gaussian") && ids.contains(&"ec.channel.invert"));
     assert!(ids.iter().all(|id| !effectcraft_effects::is_time_dependent(id)));
 }
+
+#[test]
+fn live_mode_runs_a_live_input_through_the_chain_to_a_live_output() {
+    // FFmpeg on both sides (the dataverse workflow installs it): one second of test pattern in,
+    // the chain, and an encoded file out.
+    let dir = std::env::temp_dir().join(format!("effectcraft-live-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let out = dir.join("out.mkv");
+    let run = LiveRun {
+        chain: r#"[{"id":"ec.channel.invert"}]"#.into(),
+        input: "testsrc=size=64x36:rate=10:duration=1".into(),
+        input_format: Some("lavfi".into()),
+        output: out.to_string_lossy().into_owned(),
+        control: None,
+        config: StreamConfig { width: 64, height: 36, fps: 10.0 },
+        seconds: 0,
+        carry_audio: false,
+        video_bitrate_kbps: None,
+    };
+    let mut log = Vec::new();
+    let stats = live(&run, &mut log).unwrap();
+    assert!(stats.frames >= 9 && stats.frames <= 11, "{stats:?}");
+    assert!(std::fs::metadata(&out).map(|m| m.len()).unwrap_or(0) > 500, "the output was written");
+    assert!(String::from_utf8_lossy(&log).contains("\"live\":\"started\""));
+    let _ = std::fs::remove_dir_all(&dir);
+}

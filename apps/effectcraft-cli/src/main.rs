@@ -216,6 +216,10 @@ const VALUED: &[&str] = &[
     // mcp
     "--automation-read-root",
     "--automation-write-root",
+    "--in",
+    "--in-format",
+    "--seconds",
+    "--video-bitrate",
 ];
 
 /// Options without a value. Any other `--option` is a usage error.
@@ -240,6 +244,7 @@ const FLAGS: &[&str] = &[
     "--autosave",
     "--keep-going",
     "--progress",
+    "--no-audio",
 ];
 
 struct Args {

@@ -101,11 +101,13 @@ fn stdout_broken() -> bool {
 const USAGE: &str = "usage: effectcraft-cli <info|stream|commands|exec|run|props|get|set|render-frame|render|script|replay|mcp> [args] [--json]
   info                                     project + engine summary
   stream --chain FILE|JSON --width W --height H [--fps N] [--control FIFO] | --list
+                                           live video: raw RGBA frames on standard input through a chain
+                                           of effects ([{\"id\": ID, \"params\": {...}}, ...]) to standard output;
+                                           --control: JSON lines that change parameters while it runs
   live --chain FILE|JSON --in URL|DEVICE|FILE [--in-format F] --out URL|FILE --width W --height H [--fps N]
        [--control tcp:PORT|FIFO] [--seconds N] [--no-audio] [--video-bitrate KBPS]
-                                           live video: raw RGBA frames on standard input through a chain
-                                           of effects ([{"id": ID, "params": {...}}, ...]) to standard output;
-                                           --control: JSON lines that change parameters while it runs
+                                           the same effects from a live input (a URL, a device or a file) to a
+                                           live output, through FFmpeg, the input's audio carried
   commands [--filter TEXT] [--enabled]     list engine commands
   exec <command-id> [--params JSON]        run one engine command (exec --list: list them, as `commands`)
   run <id> <json> [<id> <json> ...]        run several commands in order
@@ -1694,7 +1696,11 @@ fn live_cmd(args: &Args) -> Result<(), Failure> {
         input_format: args.opt("--in-format").map(str::to_string),
         output: need("--out")?.to_string(),
         control: args.opt("--control").map(str::to_string),
-        config: effectcraft_stream::StreamConfig { width: dim("--width")?, height: dim("--height")?, fps: args.num("--fps").map_err(Failure::Usage)?.unwrap_or(30.0) },
+        config: effectcraft_stream::StreamConfig {
+            width: dim("--width")?,
+            height: dim("--height")?,
+            fps: args.num("--fps").map_err(Failure::Usage)?.unwrap_or(30.0),
+        },
         seconds: args.num("--seconds").map_err(Failure::Usage)?.map_or(0, |s: f64| s.max(0.0) as u32),
         carry_audio: !args.flag("--no-audio"),
         video_bitrate_kbps: args.num("--video-bitrate").map_err(Failure::Usage)?.map(|k: f64| k.max(1.0) as u32),
@@ -1710,7 +1716,10 @@ fn stream_cmd(args: &Args) -> Result<(), Failure> {
     }
     let chain = args.opt("--chain").ok_or_else(|| Failure::Usage("stream needs --chain FILE or JSON (stream --list: the effects)".into()))?;
     let dim = |k: &str| -> Result<u32, Failure> {
-        args.opt(k).ok_or_else(|| Failure::Usage(format!("stream needs {k}")))?.parse::<u32>().map_err(|_| Failure::Usage(format!("{k}: a whole number of pixels")))
+        args.opt(k)
+            .ok_or_else(|| Failure::Usage(format!("stream needs {k}")))?
+            .parse::<u32>()
+            .map_err(|_| Failure::Usage(format!("{k}: a whole number of pixels")))
     };
     let fps = args.num("--fps").map_err(Failure::Usage)?.unwrap_or(30.0);
     let opts = effectcraft_stream::ServeOptions {
